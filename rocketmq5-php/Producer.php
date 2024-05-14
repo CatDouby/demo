@@ -45,38 +45,38 @@ class Producer
         $client = new MessagingServiceClient($config['endpoint'], [
             'credentials' => ChannelCredentials::createInsecure(),
             'update_metadata' => function ($metaData) use ($clientId) {
-                $metaData['headers'] = ['clientID' => $clientId]; // Pass the ClientID to the server through the header
+                $metaData['headers'] = ['Client-ID' => $clientId]; // Pass the ClientID to the server through the header
                 return $metaData;
             }
         ]);
         $this->client = $client;
+    }
 
+    public function send($topic, $data) {
         $qr = new QueryRouteRequest();
         $rs = new Resource();
         $rs->setResourceNamespace('');
-        $rs->setName('topicB');
+        $rs->setName($topic);
         $qr->setTopic($rs);
-        $status = $client->QueryRoute($qr)->wait();
+        $status = $this->client->QueryRoute($qr)->wait();
         if (STATUS_OK != $status[1]->code) {
             print_r($status); // This prints out the response data returned by the server
             return ;
         }
-        
-        $d = [
-            'name' => 'foo',
-            'number' => 'XX0000-20240513-0001'
-        ];
 
         $message = new \Apache\Rocketmq\V2\Message();
         $message->setTopic($rs);
         $message->setUserProperties([
             'name' => uniqid('msg-', true)
         ]);
-        $message->setBody(json_encode($d));
+        $message->setBody(json_encode($data));
         $msgRequest = new SendMessageRequest();
         $msgRequest->setMessages([$message]);
-        $x = $client->SendMessage($msgRequest);
-        var_dump($x);
+        $unaryCall = $this->client->SendMessage($msgRequest);
+        list($resp, $status) = $unaryCall->wait();
+        /** @var \Apache\Rocketmq\V2\SendMessageRespons $resp */
+        echo $resp->serializeToJsonString();  // serializeToString() serializeToJsonString()
+        print_r($status);
     }
 
     public function getRandStr($length){
@@ -93,9 +93,14 @@ class Producer
 }
 
 $config = [
-    'endpoint' => 'localhost:9876',
+    'endpoint' => 'localhost:8081', // The grpc service port
     'accessKey' => '',
     'secretKey' => '',
 ];
-$xx = new Producer();
-$xx->init($config);
+$p = new Producer();
+$p->init($config);
+$msg = [
+    'name' => 'foo',
+    'number' => 'XX0000-20240513-0001'
+];
+$p->send('topicB', $msg);

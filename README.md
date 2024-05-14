@@ -18,6 +18,8 @@ cd /opt/kafka/bin
 ./kafka-topics.sh --bootstrap-server localhost:9092 --list
 ```
 
+---
+
 ### rocketmq 5.2 - php
 - [rocketmq quickstart](https://rocketmq.apache.org/docs/quick-start/)
 - 开源版本的 RocketMQ sdk 地址： https://github.com/apache/rocketmq-clients/blob/master/
@@ -28,6 +30,7 @@ cd /opt/kafka/bin
 
 部署
 ```sh
+dnf install java-11-openjd
 java --version
 
 wget https://dist.apache.org/repos/dist/release/rocketmq/5.2.0/rocketmq-all-5.2.0-bin-release.zip
@@ -48,6 +51,8 @@ apt install -y php7.3-grpc
 # composer require rocketmq/rocketmq-php-sdk
 composer install
 ```
+
+---
 
 ### rabbitmq - go
 [rabbitmq quickstart](https://www.rabbitmq.com/tutorials)
