@@ -1,5 +1,7 @@
-# demo
-application/ component demos
+[TOC]
+
+demo
+> application/ component demos
 
 
 ---
@@ -16,7 +18,7 @@ cd /opt/kafka/bin
 ./kafka-topics.sh --bootstrap-server localhost:9092 --list
 ```
 
-### rocketmq 5.2
+### rocketmq 5.2 - php
 - [rocketmq quickstart](https://rocketmq.apache.org/docs/quick-start/)
 - 开源版本的 RocketMQ sdk 地址： https://github.com/apache/rocketmq-clients/blob/master/
 - 需要 jdk1.8 以上，生产环境 8-32G 内存。本机开发调试限制内存使用，修改 runserver.sh, runbroker.sh `Xms512m -Xmx512m -Xmn256m`。
@@ -46,3 +48,6 @@ apt install -y php7.3-grpc
 # composer require rocketmq/rocketmq-php-sdk
 composer install
 ```
+
+### rabbitmq - go
+[rabbitmq quickstart](https://www.rabbitmq.com/tutorials)
