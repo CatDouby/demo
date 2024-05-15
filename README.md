@@ -56,3 +56,15 @@ composer install
 
 ### rabbitmq - go
 [rabbitmq quickstart](https://www.rabbitmq.com/tutorials)
+
+```sh
+touch main.go
+go mod init github.com/CatDouby/demo/rocketmq5-go
+# git clone https://github.com/apache/rocketmq-clients
+# git checkout v5.0.1-rc2-golang
+# copy code from rocketmq-clients/golang/example/producer/normal/main.go
+go mod tidy
+# modify config : topic, endpoint.
+# Notice that the endpoint use mq server gRPC port (default 8081, not 9876, grpcServerPort configured in rmq-proxy.json), and port must be visitable from client.
+go run .
+```
