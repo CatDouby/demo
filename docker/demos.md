@@ -2,12 +2,12 @@
 
 *   [实战多阶段构建 Laravel 镜像](https://yeasy.gitbooks.io/docker_practice/image/multistage-builds/laravel.html) ::yeasy.gitbooks.io
 
-#### 使用空镜像 :
+### 使用空镜像 :
 ```Dockerfile
 FROM scratch
 ```
 
-#### 容器互通 :
+### 容器互通 :
 ```sh
 # 创建一个数据库容器
 docker run -itd --name db --env MYSQL_ROOT_PASSWORD=example  mariadb
@@ -16,7 +16,7 @@ docker run -itd -P --name web --link db:db nginx:latest
 # 此处运行的 web 容器为父容器，db为子容器
 ```
 
-#### hyperf-dleno 镜像构建
+### hyperf-dleno 镜像构建
 
 ```Dockerfile
 FROM registry.cn-hangzhou.aliyuncs.com/dleno-server/php:alp3.12-php7.4-n-sw4.8.13
@@ -62,7 +62,7 @@ docker run --name dnoapp -p 9501:9501 -p 9502:9502 \
 --privileged -u root -itd dnoapp:v1  /bin/bash
 ```
 
-#### 使用 mysql 5.7
+### 使用 mysql 5.7
 ```sh
 docker pull mysql:5.7
 
@@ -74,7 +74,7 @@ docker run -p 3306:3306 --name mysql5.7 -d \
 mysql:5.7
 ```
 
-#### 使用 redis 7.2
+### 使用 redis 7.2
 ```sh
 docker run -d --name my-redis -p 6379:6379 \
 -v /data/storage/redis:/data \
@@ -82,14 +82,16 @@ docker run -d --name my-redis -p 6379:6379 \
 redis:7.2
 ```
 
-####  使用 composer 创建项目或安装依赖
-> 容器中的 composer 不依赖于 PHP 执行文件，只需在 composer.json 中指定 PHP 版本即可。
+###  使用 php composer 容器创建项目或安装依赖
+1. 容器中的 composer 不依赖于 PHP 执行文件，只需在 composer.json 中 platform 指定 PHP 版本即可。
+2. 当前镜像版本 2.7，镜像的名称是 composer 而不是以前的 composer/composer。
+3. `docker run composer commands` 运行容器时，运行脚本自动把 commands 部分处理为 composer 命令，参考容器内的 */docker-entrypoint.sh*。
 
 ```js
 {
   "config": {
     "platform": {
-      "php": "7.4",
+      "php": "8.2",
       "ext-something": "MAJOR.MINOR.PATCH"
     }
   }
@@ -100,32 +102,60 @@ redis:7.2
 # composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/
 # composer config -g repo.packagist composer https://mirrors.cloud.tencent.com/composer/
 
-touch /work/proj/xx-proj/composer.json
-echo '{"config":{"platform":{"php":"7.4"}}}' > /work/proj/xx-proj/composer.json
+touch /work/project/xx-proj/composer.json
+echo '{"config":{"platform":{"php":"8.2"}}}' > /work/proj/xx-proj/composer.json
 
 docker run --rm --interactive --tty \
   --env COMPOSER_CACHE_DIR=/cache \ # 包缓存目录
-  -v /work/proj/xx-proj:/app \
   -v /work/cache/composer:/cache \
-  composer command
+  -v /work/project/abc.com/:/app \
+  composer install --prefer-dist # --ignore-platform-reqs --no-scripts 
 
-# composer commands:
-# composer require predis/predis
-# composer install
-#   --ignore-platform-reqs --no-scripts 
-# composer create-project laravel/laravel:^8.0 example-app
-#   cd example-app && php artisan serve
+docker run --rm --interactive --tty \
+  --env COMPOSER_CACHE_DIR=/cache \
+  -v /work/project/abc.com:/app \
+  -v /work/cache/composer:/cache  \
+  composer require --prefer-dist predis/predis
+
+docker run --rm --interactive --tty \
+  --env COMPOSER_CACHE_DIR=/cache \
+  -v /work/cache/composer:/cache \
+  -v /work/project/:/app \  # 创建项目时，只需要挂载项目所在的目录
+  composer create-project --prefer-dist laravel/laravel:^8.0 abc.com
+```
+
+```sh
+# 在宿主机添加一个名叫 composer 的函数
+# --volume $(pwd):/app 当前目录挂载到 composer 工作目录，这样可以在宿主机的任何目录使用 composer 命令。
+
+vi ~/.bashrc
+composer () {
+    docker run \
+        --rm --interactive --tty \
+        --env COMPOSER_CACHE_DIR=/cache \
+        --user $(id -u):$(id -g) \
+        --volume /etc/passwd:/etc/passwd:ro \
+        --volume /etc/group:/etc/group:ro \
+        --volume /work/cache/composer:/cache \
+        --volume $(pwd):/app \
+        composer "$@"
+}
+
+source ~/.bashrc
+cd /work/project
+composer create-project --prefer-dist laravel/laravel:^8.0 abc.com
+comoser require --prefer-dist predis/predis
 ```
 
 
-#### 使用 consul
+### 使用 consul
 ```sh
 docker run -d -p 8500:8500 --restart=always --name=consul \
   -v D:\data\consul:/consul/data \
   consul agent -server -bootstrap -ui -client='0.0.0.0'
 ```
 
-#### 使用 hperf, consul 镜像搭建微服务
+### 使用 hyperf, consul 镜像搭建微服务
 
 ##### 发布者、消费者共同的 hyperf 扩展和服务注册发现
 ```bash

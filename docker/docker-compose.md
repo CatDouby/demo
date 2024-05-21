@@ -30,31 +30,37 @@ services:
 ```
 
 #### php & nginx & redis
+```sh
+mkdir -p /work/conf/nginx.conf.d/ /work/conf/redis.conf/ /work/conf/php/ /work/project/
+touch /work/conf/php/php.ini
+touch /work/conf/redis.conf
+```
+
 ```yml
 version: "3.3"
-networks:
-  php-work:
-    driver: bridge
 services:
     redis:
         container_name: redis7.2
         image: redis:7.2
+        user: "root"
         ports:
             - 6379:6379
         volumes:
-            - "/work/conf/redis.conf:/etc/redis/conf/redis.conf"
+            - "/work/conf/redis.conf:/usr/local/etc/redis.conf"
             - "/data/storage/redis/data:/data"
         environment:
-            - REDIS_PASSWORD="123abc678"
-        command: ["redis-server", "/etc/redis/conf/redis.conf"]
+            - REDIS_PASSWORD="123abc678-x_y^z"
+        command: ["redis-server", "/usr/local/etc/redis.conf"]
         networks:
             - php-work
     php:
-        container_name: php7.4fpm
-        image: php:7.4-fpm
+        container_name: php8.2fpm
+        image: php:8.2-fpm
+        user: "root"
         ports:
             - 9000:9000
         volumes:
+            - "/work/conf/php/php.ini:/usr/local/etc/php/php.ini"
             - "/work/project:/work/project"
         environment:
             - TZ="Asia/Shanghai"
@@ -67,10 +73,12 @@ services:
     nginx:
         container_name: nginx1.20
         image: nginx:1.20
+        user: "root"
         ports:
             - 8080:80
         volumes:
             - "/work/conf/nginx.conf.d:/etc/nginx/conf.d"
+            - "/work/log/nginx:/var/log/nginx"
             - "/work/project:/work/project"
         environment:
             - TZ="Asia/Shanghai"
@@ -81,4 +89,18 @@ services:
         command: ["nginx", "-g", "daemon off;"]
         networks:
             - php-work
+networks:
+    php-work:
+        driver: bridge
+```
+
+```sh
+docker cp php7.4fpm:/usr/local/etc/php/php.ini-production /work/conf/php/php.ini
+chmod -R a+w /work/project/abc.com/storage
+```
+
+```ini
+; /usr/local/etc/redis.conf
+bind 0.0.0.0
+requirepass 123abc678-x_y^z
 ```
