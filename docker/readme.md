@@ -72,8 +72,10 @@ docker ps
 - 对 数据卷 的修改会立马生效，不会影响镜像
 - 数据卷 默认会一直存在，即使容器被删除
 - 数据卷 的使用，类似于 Linux 下对目录或文件进行 mount，镜像中的被指定为挂载点的目录中的文件会隐藏掉，能显示看的是挂载的 数据卷。
+- 命名卷，生命周期不受挂载到的容器影响，有明确的主机存储路径。 匿名卷，容器删除后随之被删除。
+
 ```
-docker volume create my-vol # 创建一个数据卷
+docker volume create my-vol # 创建一个数据卷(命名卷)
 docker volume ls # 查看所有数据卷
 docker volume inspect vol_name # 查看指定数据卷名称的挂载情况
 docker volume prune # 清理无用的卷

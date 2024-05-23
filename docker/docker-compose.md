@@ -140,3 +140,57 @@ services:
         build: ./nginx
     ...
 ```
+
+### gitea 部署
+> POSTGRES_DB 这个是 postgres 的数据库运行实例名。 GITEA__database__NAME 是指具体的 shcema。
+> postgres 的默认 数据库名是 postgres，schema需要先创建好。 所以需要的数据库信息为 POSTGRES_DB > GITEA__database__NAME
+> 部署成功后，配置文件在容器的 /data/gitea/conf/app.ini
+
+
+```yml
+version: "3"
+
+networks:
+  gitea:
+    external: false
+
+services:
+  server:
+    image: gitea/gitea:1.21.11
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=foo
+      - GITEA__database__PASSWD=foo_pwd123&okok
+    restart: always
+    networks:
+      - gitea
+    volumes:
+      - /data/docker-volume/gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "127.0.0.1:222:22"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    container_name: postgres16
+    restart: always
+    environment:
+      - POSTGRES_USER=foo
+      - POSTGRES_PASSWORD=foo_pwd123&okok
+      - POSTGRES_DB=gitea
+    networks:
+      - gitea
+    volumes:
+      - /data/docker-volume/postgres:/var/lib/postgresql/data
+    ports:
+        - "5432:5432"
+```
