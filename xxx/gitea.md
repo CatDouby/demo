@@ -1,5 +1,8 @@
 
 
+> 1. Gitea 可以不用专门安装 MySQL 或者 Postgres，选择 Sqlite3 会自动嵌入安装。
+> 2. 安装后的设置界面可以先设置好管理员的账号密码，不用走注册流程（若不设置，注册的第一个账号被视为管理员账号）。
+> 3. 截至目前 v1.21.11，CI/CD 依赖于 docker 容器，实施麻烦，不如直接使用 webhook+shell 实现部署。
 
 ### 与 PostgreSql docker-compose 部署
 - SSH 访问配置比较麻烦，一般不用，因为代码仓库一般情况下也是组织内部专网访问。
@@ -79,99 +82,59 @@ services:
 ```sh
 # 生成 runner 配置模板
 act_runner generate-config > config.yml
+# runner 向 gitea 注册后，在 runner 目录会生成一个 .runner 的注册信息文件。
 ```
 
-##### config.yml
+### CI/CD
+> 基于 Gitea Actions 实现。在项目目录内创建 actions 文件夹，然后添加配置文件 main.yml 配置工作流。
+> Gitea Actions 需要 act runner 来运行 Job。 为了避免消耗过多资源并影响Gitea实例，建议在 Gitea 以外的机器上启动 Runner。 
+
+- 文档 https://docs.gitea.com/zh-cn/usage/actions/quickstart
+- 下载 https://dl.gitea.com/act_runner/
+- [workflows](https://docs.github.com/zh/actions/using-workflows/about-workflows) ::docs.github.com
+- [workflow action 语法](https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions) ::docs.github.com
+- runner 有全局、组织、仓库 三种级别。
+
+
+##### .gitea/workflows/main.yaml
 ```yml
-log:
-  # trace, debug, info, warn, error, fatal
-  level: info
+# github 对应的是在 .github/workflows 目录
 
-runner:
-  # runner的注册信息存放的文件
-  file: .runner
-  # 执行任务的并发数
-  capacity: 1
-  # 执行任务时带入的环境变量
-  envs:
-    A_TEST_ENV_NAME_1: a_test_env_value_1
-    A_TEST_ENV_NAME_2: a_test_env_value_2
-  # 执行任务时带入的环境变量配置，文件不存在时自动忽略
-  env_file: .env
-  # 执行任务超市时间，不应该超过 Gitea 实例自身的超时时间。如果 Gitea 实例自身超时，任务也会被终止执行。
-  timeout: 3h
-  # Whether skip verifying the TLS certificate of the Gitea instance.
-  insecure: false
-  # The timeout for fetching the job from the Gitea instance.
-  fetch_timeout: 5s
-  # The interval for fetching the job from the Gitea instance.
-  fetch_interval: 2s
-  # The labels of a runner are used to determine which jobs the runner can run, and how to run them.
-  # Like: "macos-arm64:host" or "ubuntu-latest:docker://gitea/runner-images:ubuntu-latest"
-  # Find more images provided by Gitea at https://gitea.com/gitea/runner-images .
-  # If it's empty when registering, it will ask for inputting labels.
-  # If it's empty when execute `daemon`, will use labels in `.runner` file.
-  labels:
-    - "ubuntu-latest:docker://gitea/runner-images:ubuntu-latest"
-    - "ubuntu-22.04:docker://gitea/runner-images:ubuntu-22.04"
-    - "ubuntu-20.04:docker://gitea/runner-images:ubuntu-20.04"
-cache:
-  # Enable cache server to use actions/cache.
-  enabled: true
-  # The directory to store the cache data.
-  # If it's empty, the cache data will be stored in $HOME/.cache/actcache.
-  dir: ""
-  # The host of the cache server.
-  # It's not for the address to listen, but the address to connect from job containers.
-  # So 0.0.0.0 is a bad choice, leave it empty to detect automatically.
-  host: ""
-  # The port of the cache server.
-  # 0 means to use a random available port.
-  port: 0
-  # The external cache server URL. Valid only when enable is true.
-  # If it's specified, act_runner will use this URL as the ACTIONS_CACHE_URL rather than start a server by itself.
-  # The URL should generally end with "/".
-  external_server: ""
+name: ci-workflow
 
-container:
-  # Specifies the network to which the container will connect.
-  # Could be host, bridge or the name of a custom network.
-  # If it's empty, act_runner will create a network automatically.
-  network: ""
-  # Whether to use privileged mode or not when launching task containers (privileged mode is required for Docker-in-Docker).
-  privileged: false
-  # And other options to be used when the container is started (eg, --add-host=my.gitea.url:host-gateway).
-  options:
-  # The parent directory of a job's working directory.
-  # NOTE: There is no need to add the first '/' of the path as act_runner will add it automatically. 
-  # If the path starts with '/', the '/' will be trimmed.
-  # For example, if the parent directory is /path/to/my/dir, workdir_parent should be path/to/my/dir
-  # If it's empty, /workspace will be used.
-  workdir_parent:
-  # Volumes (including bind mounts) can be mounted to containers. Glob syntax is supported, see https://github.com/gobwas/glob
-  # You can specify multiple volumes. If the sequence is empty, no volumes can be mounted.
-  # For example, if you only allow containers to mount the `data` volume and all the json files in `/src`, you should change the config to:
-  # valid_volumes:
-  #   - data
-  #   - /src/*.json
-  # If you want to allow any volume, please use the following configuration:
-  # valid_volumes:
-  #   - '**'
-  valid_volumes: []
-  # overrides the docker client host with the specified one.
-  # If it's empty, act_runner will find an available docker host automatically.
-  # If it's "-", act_runner will find an available docker host automatically, but the docker host won't be mounted to the job containers and service containers.
-  # If it's not empty or "-", the specified docker host will be used. An error will be returned if it doesn't work.
-  docker_host: ""
-  # Pull docker image(s) even if already present
-  force_pull: true
-  # Rebuild docker image(s) even if already present
-  force_rebuild: false
+# events: push,pull_requst,workflow_run,
+# on: [push,pull_request] 不用 branches 过滤时可以写多个分支
+on:
+  push:
+    branches:
+      - test
+  pull_request:
+    branches:
+      - test
 
-host:
-  # The parent directory of a job's working directory.
-  # If it's empty, $HOME/.cache/act/ will be used.
-  workdir_parent:
+env:
+  AUTHOR: foo
+
+jobs:
+  # 工作名称可以任意取，不重复即可
+  deploy:
+    # if: gitea.event.name == 'xxx'
+    runs-on: ubuntu-latest
+    # timeout-seconds: 60
+    steps:
+      - run: 'echo "auhtor: ${{env.AUTHOR}}"'
+      - name: checkout test
+        # uses语句相当于执行命令的 run，用来执行 action 功能
+        uses: actions/checkout@v3
+        # with语句用来指定执行 action 的参数
+        with:
+          path: foo-deploy
+          repository: admini/mini-app-shop
+          # ref可以是分支、标签、某次提交的hash
+          ref: release-v0.1
+          github-server-url: 'http://47.109.128.35:8083'
+      - name: deploy
+        uses: xxx/yyy
 ```
 
 ##### docker run runner
@@ -186,4 +149,26 @@ docker run --name runner_raw --network=gitea_gitea \
     -e GITEA_RUNNER_REGISTRATION_TOKEN=7pkysp7N4zO0k2Kpv3ia5xbudTGh8C6rHDPmPB6a \
     -e GITEA_RUNNER_NAME=docker-runner \
     -d gitea/act_runner
+```
+
+##### actions
+- https://gitea.com/actions/
+- https://github.com/actions 
+- https://github.com/sdras/awesome-actions
+- actions/checkout 切换分支
+- actions/download-artifact 下载
+- actions/cache 缓存部署过程中依赖的外部文件
+
+##### 内置变量
+```ini
+ = ${{ gitea.actor }}
+; = ${{ github.workflow }}
+ = ${{ gitea.workspace }}
+事件名称 = ${{ gitea.event_name }}
+仓库 = ${{ gitea.repository }}
+
+
+当前分支 = ${{ gitea.ref }}
+工作目录 = ${{ gitea.workspace }}
+任务状态 = ${{ job.status }}
 ```
