@@ -11,6 +11,8 @@
 // /etc/docker/daemon.json
 {
   "registry-mirrors": [
+    "https://registry.cn-hangzhou.aliyuncs.com",
+    "https://hub-mirror.c.163.com",
     "https://docker.mirrors.ustc.edu.cn",
     "https://reg-mirror.qiniu.com",
     "https://dockerhub.azk8s.cn"
