@@ -76,10 +76,11 @@ mysql:5.7
 
 ### 使用 redis 7.2
 ```sh
-docker run -d --name my-redis -p 6379:6379 \
+docker run -d --name redis7.2 -p 6379:6379 \
 -v /data/storage/redis:/data \
--e REDIS_PASSWORD=ZHKPctsnugxgRcPm8Ezwbt3n \
-redis:7.2
+-v /work/conf/redis7.2.conf:/etc/redis.conf \
+-e REDIS_PASSWORD=xxx \
+redis:7.2 redis-server /etc/redis.conf
 ```
 
 ###  使用 php composer 容器创建项目或安装依赖
@@ -129,22 +130,24 @@ docker run --rm --interactive --tty \
 # --volume $(pwd):/app 当前目录挂载到 composer 工作目录，这样可以在宿主机的任何目录使用 composer 命令。
 
 vi ~/.bashrc
-composer () {
-    docker run \
-        --rm --interactive --tty \
-        --env COMPOSER_CACHE_DIR=/cache \
-        --user $(id -u):$(id -g) \
-        --volume /etc/passwd:/etc/passwd:ro \
-        --volume /etc/group:/etc/group:ro \
-        --volume /work/cache/composer:/cache \
-        --volume $(pwd):/app \
-        composer "$@"
+# should use different func name in shell, to a void nested call composer command.
+ccomposer () {
+  # echo "composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/ && composer $@"
+  docker run \
+      --rm --interactive --tty \
+      --env COMPOSER_CACHE_DIR=/cache \
+      --user $(id -u):$(id -g) \
+      --volume /etc/passwd:/etc/passwd:ro \
+      --volume /etc/group:/etc/group:ro \
+      --volume /work/cache/composer:/cache \
+      --volume $(pwd):/app \
+      composer:latest "composer $@"
 }
 
 source ~/.bashrc
 cd /work/project
-composer create-project --prefer-dist laravel/laravel:^8.0 abc.com
-comoser require --prefer-dist predis/predis
+ccomposer create-project --prefer-dist laravel/laravel:^8.0 abc.com
+ccomposer require --prefer-dist predis/predis
 ```
 
 
